@@ -1,0 +1,46 @@
+body{
+    position: absolute;
+    margin: 0px;
+    width: 100%;
+    height: 100%;
+    background-color: #0d261a;
+}
+
+#title{
+    width: 100%;
+    height: 10%;
+}
+
+#tab_menu{
+    background-color: lightgrey;
+    width: 100%;
+    height: 5%;
+}
+
+.menu{
+    float: left;
+    width: 20%;
+    height: 100%;
+}
+
+.menu:hover{
+    background-color: grey;
+}
+
+#content{
+    background-color: #fffae6;
+    width: 100%;
+    height: 85%;
+}
+
+#left{
+    float: left;
+    width: 50%;
+    height: 100%;
+}
+
+#right{
+    float: left;
+    width: 50%;
+    height: 100%;
+}
