@@ -8,13 +8,52 @@
 <body>
     <div id="title"></div>
     <div id="tab_menu">
-        <button class="menu" id="motifs">Motifs</button>
-        <button class="menu" id="find">Find Motif</button>
-        <button class="menu" id="help">Help</button>
+        <button class="menu" id="sets" onclick="openTab('sets_con', this)">Sets</button>
+        <button class="menu" id="motifs" onclick="openTab('motifs_con', this)" disabled>Motifs</button>
+        <button class="menu" id="find" onclick="openTab('find_con', this)" disabled>Find Motif</button>
+        <button class="menu" id="help" onclick="openTab('help_con', this)">Help</button>
     </div>
     <div id="content">
-        <div id="left"></div>
-        <div id="right"></div>
+        <div id="sets_con" class="content">
+            <div class="left">
+                <label>Sets</label><br>
+                <div id="set_list">
+                    <p>Set 1</p>
+                </div><br><br><br>
+                <div id="set_search">
+                    Search: <input type="search" id="set_search_in">
+                    <button>Search</button>
+                </div>
+            </div>
+            <div class="right">
+                <label>Set Description</label><br>
+                <div id="set_desc">
+                    <p>Description: </p>
+                    <p># Motif Sequences: </p>
+                    <p>Consensus Sequence: </p>
+                </div><br>
+                <form id="set_form">
+                    <button>Open in Motifs</button><br><br><br>
+                    <label>Add New Set</label><br>
+                    <div id="new_set">
+                        Name: <input type="text"><br><br>
+                        Description: <input type="text">
+                        <br>
+                    </div><br>
+                    <button>Create New Set</button>
+                </form>
+            </div>
+        </div>
+        <div id="motifs_con" class="content">
+            Motifs
+        </div>
+        <div id="find_con" class="content">
+            Find
+        </div>
+        <div id="help_con" class="content">
+            Help
+        </div>
     </div>
+    <script rel="script" src="base_h.js"></script>
 </body>
 </html>
