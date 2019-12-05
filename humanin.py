@@ -1,15 +1,21 @@
 import pandas as pd
 from subprocess import Popen, PIPE
 import os
-
-fasta_1 = r"C:\Users\kryst\Desktop\School\Genomics and Bioinfo\Fasta files\C_variegatus_sequence.fasta"
-fasta_2 = r"C:\Users\kryst\Desktop\School\Genomics and Bioinfo\Fasta files\E_macularius_sequence.fasta"
-fasta_3 = r"C:\Users\kryst\Desktop\School\Genomics and Bioinfo\Fasta files\G_luii_sequence.fasta"
+from optparse import OptionParser
 
 
-def get_sequence(seq_file):
+# fasta_1 = r"C:\Users\kryst\Desktop\School\Genomics and Bioinfo\Fasta files\C_variegatus_sequence.fasta"
+# fasta_2 = r"C:\Users\kryst\Desktop\School\Genomics and Bioinfo\Fasta files\E_macularius_sequence.fasta"
+# fasta_3 = r"C:\Users\kryst\Desktop\School\Genomics and Bioinfo\Fasta files\G_luii_sequence.fasta"
+
+# test_gracilis = r"gracilis.fasta"
+# test_human = r"homo_sapien.fasta"
+# test_chimp = r"pan_troglodytes.fasta"
+
+
+def get_sequence(seq_file_path):
     sequence = ""
-    with open(seq_file, "r") as file_in:
+    with open(seq_file_path, "r") as file_in:
         for line in file_in.readlines()[1:]:
             sequence = sequence + line.rstrip()
     return sequence
@@ -18,7 +24,7 @@ def get_sequence(seq_file):
 def get_translation(seq_in):
     my_env = os.environ.copy()
     my_env["PATH"] = "/usr/sbin:/sbin:" + my_env["PATH"]
-    c = Popen(["python", "emboss_transeq.py", "--email", "krystal.manke@gmail.com", "--sequence", seq_in, "--frame", "6", "--codontable", "2"], env=my_env, shell=True, stdout=PIPE, stderr=PIPE)
+    c = Popen(["python", "emboss_transeq.py", "--email", "mankek@alumni.msoe.edu", "--sequence", seq_in, "--frame", "6", "--codontable", "2"], env=my_env, shell=True, stdout=PIPE, stderr=PIPE)
     proc_out, proc_errs = c.communicate()
     job_id = proc_errs.decode().rstrip().split(" ")[-1]
     return job_id
@@ -43,20 +49,9 @@ def read_translation(trans_file):
                 seq = seq + line
     seq_list[frame] = seq
     seq_list.pop("none")
+    os.remove(trans_file + ".out.txt")
+    os.remove(trans_file + ".sequence.txt")
     return seq_list
-
-
-seq_1 = get_sequence(fasta_1)
-trans_1 = get_translation(seq_1)
-seqs_1 = read_translation(trans_1)
-
-seq_2 = get_sequence(fasta_2)
-trans_2 = get_translation(seq_2)
-seqs_2 = read_translation(trans_2)
-
-seq_3 = get_sequence(fasta_3)
-trans_3 = get_translation(seq_3)
-seqs_3 = read_translation(trans_3)
 
 
 def add_aa(dict_in, set_in):
@@ -75,19 +70,17 @@ def count_positions(text_in, text_dict, set_in):
     return text_dict, set_in
 
 
-def read_proteins():
+def read_proteins(seq_file):
     aa_set = set()
     pos_dict = dict()
-    for i in range(0, 24):  # 24: the number of amino acids in the peptide
+    for i in range(0, 25):  # 25: the number of amino acids in the peptide (plus stop codon)
         pos_dict[i] = dict()
-    with open("humanin.txt", "r") as file_in:
+    with open(seq_file, "r") as file_in:
         for i in file_in.readlines():
             pos_dict, aa_set = count_positions(i.rstrip(), pos_dict, aa_set)
     pos_dict = add_aa(pos_dict, aa_set)
     return pos_dict, aa_set
 
-
-pos_dict_out, aa_set_out = read_proteins()
 # print(pos_dict_out)
 
 
@@ -106,9 +99,6 @@ def get_counts(pos_dict, aa_set):
     return probs_df, consen_df, consensus
 
 
-probability_df, consensus_df, consensus_text = get_counts(pos_dict_out, aa_set_out)
-
-
 def find_prob(prob_df, text_in):
     aa_list = list(prob_df.columns)
     text_probs = 1
@@ -122,50 +112,145 @@ def find_prob(prob_df, text_in):
     return text_probs
 
 
-def find_humanin(sequence_in):
+def find_humanin(sequence_in, prob_df):
     prob = 0
     likely_hum = ""
     sequence_in.replace("-", "*")
-    for i in range(0, len(sequence_in) - 24):
-        subseq = sequence_in[i:(i + 24)]
-        sub_prob = find_prob(probability_df, subseq)
+    for i in range(0, len(sequence_in) - 25):
+        subseq = sequence_in[i:(i + 25)]
+        sub_prob = find_prob(prob_df, subseq)
         if sub_prob > prob:
             prob = sub_prob
             likely_hum = subseq
     return prob, likely_hum
 
 
-for key, value in seqs_1.items():
-    print("C_variegatus - Seq " + key + ": ", find_humanin(value))
+def yield_results(frame_opt, file_in, output_file, prob_opt, prob_df, con_prob):
+    seq = get_sequence(file_in)
+    trans = get_translation(seq)
+    seqs = read_translation(trans)
+    if frame_opt == "All":
+        for key, value in seqs.items():
+            prob, motif = find_humanin(value, prob_df)
+            if prob_opt:
+                rel_prob = str((prob/con_prob) * 100) + "% "
+            else:
+                rel_prob = ""
+            output_file.write(file_in + " - Frame: " + key + ": " + rel_prob + motif + "\n\n")
+    elif frame_opt == "Best":
+        max_key = ""
+        max_prob = 0
+        max_motif = ""
+        for key, value in seqs.items():
+            prob, motif = find_humanin(value, prob_df)
+            if prob > max_prob:
+                max_prob = prob
+                max_key = key
+                max_motif = motif
+        if prob_opt:
+            rel_prob = str((max_prob/con_prob) * 100) + "% "
+        else:
+            rel_prob = ""
+        output_file.write(file_in.split("\\")[-1] + " - Frame: " + max_key + ": " + rel_prob + max_motif + "\n\n")
+    else:
+        for key, value in seqs.items():
+            prob, motif = find_humanin(value, prob_df)
+            if prob_opt:
+                rel_prob = str((prob / con_prob) * 100) + "% "
+            else:
+                rel_prob = ""
+            if key == str(frame_opt):
+                output_file.write(file_in + " - Frame: " + key + ": " + rel_prob + motif + "\n\n")
 
-for key, value in seqs_2.items():
-    print("E_macularius - Seq " + key + ": ", find_humanin(value))
 
-for key, value in seqs_3.items():
-    print("G_luii - Seq " + key + ": ", find_humanin(value))
+def main():
+    parser = OptionParser()
+    parser.add_option("-i", "--input", dest="input", help="Read data from FASTA file; can also be a directory path if "
+                                                            "the -d option is used")
+    parser.add_option("-o", "--output", dest="output", help="Name of the output file")
+    parser.add_option("-m", "--matrix", dest="matrix", default="humanin.txt", help="File containing the motif sequences "
+                                                                                   "used to create the probability "
+                                                                                   "matrix; each line should hold a "
+                                                                                   "separate sequence; all sequences "
+                                                                                   "should be the same length")
+    parser.add_option("-d", "--dir", action="store_true", dest="directory", default=False, help="Read data from FASTA "
+                                                                                                "files in this "
+                                                                                                "directory")
+    parser.add_option("-f", "--frames", dest="frames", default="All", help="Determines for which frames the most "
+                                                                           "probable humanin sequence is returned; "
+                                                                           "options: 1-6, All, or Best")
+    parser.add_option("-p", "--probs", action="store_true", dest="probabilities", default=False, help="Includes relative"
+                                                                                                      " probability of "
+                                                                                                      "the motif (as "
+                                                                                                      "compared to "
+                                                                                                      "probability of "
+                                                                                                      "consensus "
+                                                                                                      "sequence)")
+
+    (options, args) = parser.parse_args()
+    pos_dict_out, aa_set_out = read_proteins(options.matrix)
+    probability_df, consensus_df, consensus_text = get_counts(pos_dict_out, aa_set_out)
+    consensus_prob = find_prob(probability_df, consensus_text)
+    # if len(args) < 1:
+    #     parser.error("Input option required")
+    if options.input:
+        if options.directory:
+            file_directory = options.input
+            print("Directory: " + file_directory)
+            with open(options.output + "_humanin_results.txt", "w") as file_out:
+                for file in os.listdir(file_directory):
+                    file_in = os.path.join(file_directory, file)
+                    print("File: " + file_in)
+                    yield_results(options.frames, file_in, file_out, options.probabilities, probability_df, consensus_prob)
+        else:
+            with open(options.output + "_humanin_results.txt", "w") as file_out:
+                file = options.input
+                yield_results(options.frames, file, file_out, options.probabilities, probability_df, consensus_prob)
+    else:
+        print("No input file specified.\nUse 'python humanin.py -h' for the help message.")
 
 
-# test_seq_1 = "TKNTPAQPLQPSQNTN-NITTH-VYEMELYLKRNSM-YLKGIMKESIYL-VYHS-TYTPYLLHHGLASMLQI-RPTPVTPKPDELPKSNRKDEPISVAMEWEDF-VEAKHQPSLVMAGYSLNEL-FNSSHTPNMPQFNGTA--YTMKVQLYCNWLQPKLVGHTFLNMTVGL-AATKNKCVQAHMTPMQ-FHHTPY-PNWVILLLNK-NPAKTSNKSPISSQALKSARTNHW-LTDYKKYYKQNQVYLPLTLLSPQH-HA--MMKSLK-NSANNTPTVYQKHSL-LQSSIKGPACPVKMLF-RPRYPNRAKVA-SIAP-MGAGMNGWM-VYLSPETN-WNWSFSTKAGIHP-DEQTLWSLKL-YYNQFTPTFPGNSLKLDSINTFSWGDCGM-KIFHVN-TMIHP-PTSQ-KTHLTQ-HWSTNQVTPGMTAPSPS-AHIAKGAYDLDVGSGQPSGAAATKGSFVQRLMSYVIWVQTGEIQVGFYLCLSFLSTKGPEKLTPLLTNTRLISLLNTNQNTKTILLTPLDKG--"
-# test_seq_2 = "PKMRLHNRSNHHKTQIKTLLHTKYM--NFILSAMAYSTS-ESWKNPSTFKYITAGLTPRTSCIMV-QAYY-FSALHLSPRNQTSYL-AIV-MNPSLWQ-SGKTS---RNTNRAWW-LVTH-MNFNSTLATPPMYHNLMAQLEDMQ--YSFIVIGYNQN-WDTLSSM-LWAFKPPPKTNAFKHM-HQYNNFTTPPMDQTELFYYSMKETLLKLVMSHPSPRKPLSQHGPTTDS-QTTKSIMNKIKYIYHLHSCHPNTGMHKG--KVSKGTRLMTPQLFTKNMAFSYNQVLKVPPAQWKYFFNGRGILTVQ--RNQLPLK-GLVWTAEWGCTCLL-PINETDLSVQKLEFTHKTN-PCGA-NSNTTTNLPLLSPETP-NLMVLMLLVGATAEYKKSST-TGP-SIQDQQVKEKHIWPSNTDQRTKLPQG-QRHPLQEPMSP-GLTTSMLDQDNQVAQPLLKVRLFND-CPTWSEF-PEKS-SVSIYV-VSSVRKDQ-N-RHY-PTRV-FHYWTQIKTPKQSF-HP-MKG-"
-# test_seq_3 = "QKYACTTAPTITKHKLKHYYTLSMWD-TLS-AQ-HMVPQGNHE-IHLPLSMSQQDLHPVPLASWFSKHTTDLAPYTCHPET-RAT-EQS-GWTHLCGN-VG-LLG-GETPTEPGDSWLLIKWTLIQL-PHPQYTTI-WHS-KMYNKGTALL-LATTKISGTHFPQYNCGPLSRHQKQMRSSTYNTNTMISPHPL-TKLSYFITQ-KKPC-N---VTHLLASP-VSTDQPLMVN-LQKVL-TKSSMFTTYTPVTPTQACMKDNKKSQKELG--HPNCLPKT-PLATIKY--SRLPSENTFLTAAVS-PCKGSVINCPLN-GWYERLNEGVPVSWDQLMKLIFQYKSWNSPM-RTDPVELKTLMLQPIYPYFPRKLLKTW-Y-YF-LGRLRNMKNLPRKQDHNPSKTNKSKKNTSDPVTLINEPSYP-DNSAIPFKSPYRQGGLRPRCWI-TTKWRSRY--FVCSTINVLRDLSSDR-NPGRFLSMFKFPQYE-T-ETNATINQHAFNFTTEHKSKHQNNPFNTP---VE"
-# test_seq_1_rev = "SLPFI-GC-KDCFGVLICVQ-WN-TRVG--WR-FLWSFRTEET-T-METDLDFSGLNSDHVGH-SLNKRTFSSGCATWLSWSNIEVVSPLGDMGSW-GWRCYPWGNLVRWSVLLGQMCFSLTCWSWMDYGPVYVEDFLYSAVAPTKSINTIKF-GVSGES-GKLVVVLEF-APQGLFVLWVNSSFCTE-SVSLIGL--QVHPHSAVHTSPYL-GNWLRYLCTV-MPRPLKKYFHWAGGTFNTWL-LKAMFLVNSWGVISRVPFETFYYPLCMPVLGWQECKW-MYLILFMMLFVVC-LSVVGPCWLKGLRGDGWLITSFS-VSFIE--NNSVWSMGGVVKLLYWCYMCLNAFVFGGGLKAHSYIEESVSH-FWL-PITMKLYLYCMSSSCAIKLWYIGGVA-VELKFI-WVTSYHQARLVFRLYLEVFPLYCH-DGFILTIAL--LVWFRGD-C-ALNL-YAC-TMMQEVRGVSPAVMYLKVDGFFHDSLEVLYAIALKMKFYLMYLVCSNVLICVLWWLERLC-RIFG"
-# test_seq_2_rev = "LYPLS-GVK-IVLVFWFVFSSEIKRVLVNSGVSFSGPFVL-KLKH--KPTWISPVWTQIT-DINRWTNEPLVAAAPLGCPDPTS-S-APLAMWALEGDGAVIPGVTWFVDQCYWV-CVFLWLVGLGWIMVLFTWKIFYIPQSPQLKVLMLSSFKEFPGKVGVNWL-Y-SFKLH-VCSSYGWIPAFVLKDQFH-LVSGD-YTLIQPFMPAPI-GAIDYATFARLGYRGR-KSIFTGQAGPLMLDCS--LCFW-TVGVLLAEFLL-LFIILYACLCWGD-SVSGKYTWFCL-YFL-SVNYQWLVRADL-ACEEMGDLLLVLAGFLLLSNKMTQFGL-GVWWNYCIGVMCAWTHLFLVAA--PTVML-KVCPTNFGCSQLQ-SCTFIVYLLAVPLNCGMLGVWLELN-SSFNE-PAIT-LGWCFAST-KSSHSIATEMGSSLRLLLGSSSGFGVTGVGR-ICSMLAKPWCK-YGV-VLLWYT---MDSFMIPL-YYMLLRL--SSISYT-CVVMF-FVFCDGWSGCAGVFL"
-# test_seq_3_rev = "STLYLGVLKGLFWCFDLCSVVKLNACWLMVALVSLVLSYWGNLNMD-NRPGFLRSEL-SR-TLIVEQTNL--RLRHLVVLIQHRGRKPPWRYGLLKGMALLSLG-LGSLISVTGSDVFFFDLLVLDGLWSCLRG-FFMFRSRPN-KY-YYQVL-SFRGK-G-IGCSI-VLSSTGSVRLMGEFQLLYWKISFINWSQETGTPSFSRSYQPLFKGQLITLPLHG-DTAAVKKVFSLG-RDL-YLIVAKGYVFGKQLGCY-PSSFWDFLLSFMHACVGVTGV-VVNMLDFVYNTFCSLLTISGWSVLT-GLA--WVTYY-F-QGFFYWVMK-LSLVY-GCGEIIVLVLYVLERICFWWRLKGPQLYWGKCVPLILVVANYNKAVPLLYIF-LCH-IVVYWGCG-SWIKVHLMSNQLSPGSVGVSPLP-SLPTLLPQ-WVHPYDCS-VARLVSGWQV-GAKSVVCLLNHDA-GTGCKSCCDMLKG-WILSWFPWGTMCYCA-DKVLSHMLSV--CFNLCFVMVGAVVQAYFW"
+if __name__ == "__main__":
+    main()
+
+
+# test files
+
+# seq_1 = get_sequence(test_human)
+# trans_1 = get_translation(seq_1)
+# seqs_1 = read_translation(trans_1)
 #
-# gracilis_1 = "A-SSPHPPPPPTTKTTKPTKQTIWQGQ-MRLNPTNDAMVKQYRKGKVKYPQL-SNMKQGQTPVPFASWSSKNPLAK-IYSPLPRNRMSYFWATN-PNPSL-QKSGTTPK-GQKT-RTRW-LVTW-KNISSTS-RTTH-LVLTWRL--YSMGVQLYWT-LQPAAENNQNHAISGPQSSHHQTTASQPHHKNTTLNTSPLQAHQAIL-PY--TYA-ISNKSPSLSAHACNSAMEHLLTIN-PKKDQCYTNKTKILPTVNPTQDCLM-KIKHQ--N-ANFQAPTVYQKHSL-QKVLKVSPAQWLTTYLNGRGILTVQ--RNHLSPK-GLVWMAKWGPSCLPWLISEIDLPVQKLVPCGA-NTYAKQHQPPNNAMTFSVGATTETNKTSKP-ISSSTTDKHVYITWP-TTLNNEPSYP-DNSAIFFKSPHRQEGLRPRCWI-TPQWCSRY--FVCSTIKVLRDLSSDR-NPGRFLSMLNLPQYE-T-KVGPILT-SP-STADMNLTCR-QKSKPKT-AI"
+# seq_2 = get_sequence(test_chimp)
+# trans_2 = get_translation(seq_2)
+# seqs_2 = read_translation(trans_2)
 #
-# human_test_3 = "-T-PQTHSTLLPDNLSQTIYPNKV-AIEIETWRNRYSTARER-KIITKHNIARTNPYTFCIMN-LEITLQGEPKLRPPKPDELPKNS-KSTPVYVAK-WEDL-VEATNLPSLVIAGCPR-NLSSTLNLPTEPSKSPCKFNC-SKEEQLFGH-EKTL-RE-KI-HP--A-KQPPIKKAFKLNTHYLKNPKHITELLTPNWTNLSPYRRTNVSISNMKTFSSA-ACVRLKH-TDN-QPNIYNQPTSHYYPHCQPNTGMLIRKG-KK-KELGKSYPACLPKTSPLASPVLEAPPAQ-HMFNGRGTLTVQR-HNHLFLK-GPV-MAPRGFSCLLLLTSEIDLPVKRRA-HSKTRRPYGALIY-CKQYLTNPQVLNYQTCIKNFGWGDLGAEPNLRAVHAKTSPVKANYYTQLIQ-LDQRNKLP-G-QRNPILESISTIGFTTSMLDQDIPMVQPLLKVRLFND-SPT-SEFRPE-SRSVSIYXQIPPCTKGQEK-GLLHKAPSPVNDIIST-YYTHTHPRTGF"
+# seq_3 = get_sequence(test_gracilis)
+# trans_3 = get_translation(seq_3)
+# seqs_3 = read_translation(trans_3)
 #
-# print(find_prob(probability_df, consensus_text))
-# print(consensus_text)
-# print("Gecko frame 1: ", find_humanin(test_seq_1))
-# print("Gecko frame 2: ", find_humanin(test_seq_2))
-# print("Gecko frame 3: ", find_humanin(test_seq_3))
-# print("Gecko reverse frame 1: ", find_humanin(test_seq_1_rev))
-# print("Gecko reverse frame 2: ", find_humanin(test_seq_2_rev))
-# print("Gecko reverse frame 3: ", find_humanin(test_seq_3_rev))
-# print("Glass lizard frame 1: ", find_humanin(gracilis_1))
-# print("Human frame 3: ", find_humanin(human_test_3))
+# for key, value in seqs_1.items():
+#     print("H sapiens - Frame " + key + ": ", find_humanin(value))
+#
+# for key, value in seqs_2.items():
+#     print("P troglodytes - Frame " + key + ": ", find_humanin(value))
+#
+# for key, value in seqs_3.items():
+#     print("D gracilis - Frame " + key + ": ", find_humanin(value))
+
+# file_directory = r"squamates"
+# with open("squamates_results.txt", "w") as file_out:
+#     for file in os.listdir(file_directory):
+#         seq = get_sequence(os.path.join(file_directory, file))
+#         trans = get_translation(seq)
+#         seqs = read_translation(trans)
+#         for key, value in seqs.items():
+#             prob, motif = find_humanin(value)
+#             file_out.write(file + " - Frame: " + key + ": " + str(prob) + "% " + motif + "\n")
+#         file_out.write("\n")
+
+
+
+
 
 
 
