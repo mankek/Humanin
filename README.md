@@ -55,6 +55,7 @@ job will also be available in the project directory.
 INPUT: Can be a path to a FASTA file or to a directory containing FASTA files. If the path is
 a directory, all files in the directory will be processed and the results for each will be
 combined into a single output file. The input file(s) should be a FASTA file containing the DNA sequence of the 16s gene.
+This script does not support multi-organism FASTA files.
 
 OUTPUT: Defines the prefix of the output file. The output file will be named as follows: prefix + '_humanin_results.txt'.
 

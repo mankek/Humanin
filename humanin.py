@@ -144,7 +144,7 @@ def yield_results(frame_opt, file_in, output_file, prob_opt, prob_df, con_prob, 
             rel_prob = str((max_prob/con_prob) * 100) + "% "
         else:
             rel_prob = ""
-        output_file.write(file_in.split("\\")[-1] + " - Frame: " + max_key + ": " + rel_prob + max_motif + "\n\n")
+        output_file.write(file_in.split("\\")[-1] + " - Frame " + max_key + ": " + rel_prob + max_motif + "\n\n")
     else:
         for key, value in seqs.items():
             prob, motif = find_humanin(value, prob_df, line_count)
