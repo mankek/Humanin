@@ -49,7 +49,8 @@ Example Usage:
 
 `python humanin.py -i path_to_fasta -o Test\test`
 
-This will output a file called "test_humanin_results.txt" to the Test directory.
+This will output a file called "test_humanin_results.txt" to the Test directory that contains
+ _Humanin_ motifs identified in the FASTA at the input path.
 
 ###### **Tool Options**
 
