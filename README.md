@@ -8,7 +8,9 @@ the most likely _Humanin_ motif in each reading frame of the translated peptide 
 matrix formed from identified _Humanin_ sequences in a variety of species (more details below).
 
 #### Using the tool
-Required libraries are contained in the requirements.txt file
+Required libraries are contained in the requirements.txt file and can be installed as follows:
+
+`pip install -r requirements.txt`
 
 Navigate to the Project directory and run:
 `python humanin.py -h`
