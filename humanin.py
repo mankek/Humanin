@@ -15,7 +15,7 @@ def get_sequence(seq_file_path):
 def get_translation(seq_in):
     my_env = os.environ.copy()
     my_env["PATH"] = "/usr/sbin:/sbin:" + my_env["PATH"]
-    c = Popen(["python", "emboss_transeq.py", "--email", "mankek@alumni.msoe.edu", "--sequence", seq_in, "--frame", "6", "--codontable", "2"], env=my_env, shell=True, stdout=PIPE, stderr=PIPE)
+    c = Popen(["python", "emboss_transeq.py", "--email", "mankek@alumni.msoe.edu", "--sequence", seq_in, "--frame", "6", "--codontable", "0"], env=my_env, shell=True, stdout=PIPE, stderr=PIPE)
     proc_out, proc_errs = c.communicate()
     job_id = proc_errs.decode().rstrip().split(" ")[-1]
     return job_id
@@ -118,6 +118,22 @@ def find_humanin(sequence_in, prob_df, line_count):
     return prob, likely_hum
 
 
+def find_dna(sequence_in, frame, translation, motif):
+    # print(translation)
+    motif_ind = translation.find(motif)
+    # print(motif_ind)
+    if int(frame) > 0:
+        seq_start = int(frame) - 1
+        sequence_framed = sequence_in[seq_start:]
+    else:
+        seq_start = int(frame)
+        sequence_framed = sequence_in[seq_start::-1]
+    # print(sequence_in)
+    # print(sequence_framed)
+    dna_seq = sequence_framed[(motif_ind*3):((motif_ind*3) + (3*25))]
+    return dna_seq
+
+
 def yield_results(frame_opt, file_in, output_file, prob_opt, prob_df, con_prob, line_count):
     seq = get_sequence(file_in)
     trans = get_translation(seq)
@@ -129,7 +145,8 @@ def yield_results(frame_opt, file_in, output_file, prob_opt, prob_df, con_prob, 
                 rel_prob = str((prob/con_prob) * 100) + "% "
             else:
                 rel_prob = ""
-            output_file.write(file_in + " - Frame: " + key + ": " + rel_prob + motif + "\n\n")
+            output_file.write(file_in + " - Frame: " + key + ": " + rel_prob + motif + "\n")
+            output_file.write("DNA Sequence: " + find_dna(seq, key, seqs[key], motif) + "\n\n")
     elif frame_opt == "Best":
         max_key = ""
         max_prob = 0
@@ -144,7 +161,8 @@ def yield_results(frame_opt, file_in, output_file, prob_opt, prob_df, con_prob, 
             rel_prob = str((max_prob/con_prob) * 100) + "% "
         else:
             rel_prob = ""
-        output_file.write(file_in.split("\\")[-1] + " - Frame " + max_key + ": " + rel_prob + max_motif + "\n\n")
+        output_file.write(file_in.split("\\")[-1] + " - Frame " + max_key + ": " + rel_prob + max_motif + "\n")
+        output_file.write("DNA Sequence: " + find_dna(seq, max_key, seqs[max_key], max_motif) + "\n\n")
     else:
         for key, value in seqs.items():
             prob, motif = find_humanin(value, prob_df, line_count)
@@ -153,7 +171,8 @@ def yield_results(frame_opt, file_in, output_file, prob_opt, prob_df, con_prob, 
             else:
                 rel_prob = ""
             if key == str(frame_opt):
-                output_file.write(file_in + " - Frame: " + key + ": " + rel_prob + motif + "\n\n")
+                output_file.write(file_in + " - Frame: " + key + ": " + rel_prob + motif + "\n")
+                output_file.write("DNA Sequence: " + find_dna(seq, key, seqs[key], motif) + "\n\n")
 
 
 def main():
@@ -196,9 +215,13 @@ def main():
                     print("File: " + file_in)
                     yield_results(options.frames, file_in, file_out, options.probabilities, probability_df, consensus_prob, line_count)
         else:
-            with open(options.output + "_humanin_results.txt", "w") as file_out:
-                file = options.input
-                yield_results(options.frames, file, file_out, options.probabilities, probability_df, consensus_prob, line_count)
+            if os.path.isdir(options.input):
+                print("Please use the -d option with a path to a directory")
+            else:
+                with open(options.output + "_humanin_results.txt", "w") as file_out:
+                    file = options.input
+                    print("File: " + file)
+                    yield_results(options.frames, file, file_out, options.probabilities, probability_df, consensus_prob, line_count)
     else:
         print("No input file specified.\nUse 'python humanin.py -h' for the help message.")
 

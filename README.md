@@ -4,8 +4,8 @@
 
 This is a repository containing scripts and resources for a computational tool that takes a FASTA
 file containing the DNA sequence of the mitochondrial 16s gene, translates the sequence (using the EMBOSS Transeq tool) and identifies
-the most likely humanin motif in each reading frame of the translated peptide sequence, using a probability 
-matrix formed from identified humanin sequences in a variety of species (more details below).
+the most likely _Humanin_ motif in each reading frame of the translated peptide sequence, using a probability 
+matrix formed from identified _Humanin_ sequences in a variety of species (more details below).
 
 #### Using the tool
 Required libraries are contained in the requirements.txt file
@@ -15,7 +15,7 @@ Navigate to the Project directory and run:
 
 This will produce a help message listing all the options for the tool:
 
-_Usage: humanin.py [options]_
+_Usage: Humanin.py [options]_
 
 _Options:_
 
@@ -37,7 +37,7 @@ _-m MATRIX, --matrix=MATRIX
 _-d, --dir             Read data from FASTA files in this directory_
   
 _-f FRAMES, --frames=FRAMES
-                        Determines for which frames the most probable humanin
+                        Determines for which frames the most probable _Humanin_
                         sequence is returned; options: 1-6, All, or Best_
                         
 _-p, --probs           Includes relative probability of the motif (as
@@ -47,8 +47,7 @@ Example Usage:
 
 `python humanin.py -i path_to_fasta -o Test\test`
 
-This will output a file called "test_humanin_results.txt" to the Test directory. The file resulting fro the translation
-job will also be available in the project directory.
+This will output a file called "test_humanin_results.txt" to the Test directory.
 
 ###### **Tool Options**
 
@@ -60,7 +59,7 @@ This script does not support multi-organism FASTA files.
 OUTPUT: Defines the prefix of the output file. The output file will be named as follows: prefix + '_humanin_results.txt'.
 
 MATRIX: Path to the file used to create the probability matrix. The file should be a text file
-containing known humanin peptide sequences - one on each line and 25 aa's long to account for potential stop codons. A default file is provided that contains humanin sequences
+containing known _Humanin_ peptide sequences - one on each line and 25 aa's long to account for potential stop codons. A default file is provided that contains _Humanin_ sequences
 from the following species (in this order): 
 * _Homo sapiens_
 * _Pan troglodytes_
@@ -81,16 +80,16 @@ from the following species (in this order):
 
 These sequences were obtained from Figure 1 of the article: 
 
-_Ian S. Logan. 2017. Pseudogenization of the Humanin gene is common in the mitochondrial DNA of many vertebrates. Zoological Research, 38(4): 198-202_
+_Ian S. Logan. 2017. Pseudogenization of the _Humanin_ gene is common in the mitochondrial DNA of many vertebrates. Zoological Research, 38(4): 198-202_
 
 dir: Indicates that the input is a directory containinf FASTA files
 
 FRAMES: Indicates which frames will have their motif recorded in the output. A value of 'Best'
-will include only the frames with the most likely humanin motif in the output; a value of 'All'
-will include the most likely humanin motifs for each frame in the output; a number value (1-6) will include
-the humanin motif for that specified frame in the output.
+will include only the frames with the most likely _Humanin_ motif in the output; a value of 'All'
+will include the most likely _Humanin_ motifs for each frame in the output; a number value (1-6) will include
+the _Humanin_ motif for that specified frame in the output.
 
-probs: Indicates that the output should include the relative probability for the humanin motif; this value is found by 
+probs: Indicates that the output should include the relative probability for the _Humanin_ motif; this value is found by 
 calculating the probability of the consensus sequence for the probability matrix (the max possible probability)
 
 #### Translation
@@ -101,7 +100,6 @@ via the REST API client script. Jobs are initialized using the following options
 * --frame 6 (all frames)
 * --codontable 2 (Vertebrate Mitochondrial)
 
-The files resulting from these jobs are saved in the project directory
 
 #### Probability Matrix
 
@@ -110,15 +108,15 @@ The probability is formed as follows:
 Each sequence in the designated matrix file is lined up and for each position the count
 unique amino acid value is calculated. This count is then used to generate a probability associated
 with that particular amino acid at that particular position. These probabilities are stored in a 
-dataframe which is then referenced for identifying the most probable humanin sequence within a peptide sequence.
+dataframe which is then referenced for identifying the most probable _Humanin_ sequence within a peptide sequence.
 
-#### Identifying Humanin
+#### Identifying _Humanin_
 
 Once a sequence has been translated, each frame sequence is iterated through in 25 aa windows (step of 1) and the probability associated with
 each amino acid at that particular position is obtained from the probability matrix; if the amino
 acid has no associated probability at that that position (meaning none of the matrix sequences had that aa at that position)
 the amino acid is given the minimum possible non-zero probability. These probabilities are multiplied
-together to identify the probability of the subsequence being a humanin motif; the subsequence with the highest
-probability is returned as the 25 aa-long humanin motif for that frame.
+together to identify the probability of the subsequence being a _Humanin_ motif; the subsequence with the highest
+probability is returned as the 25 aa-long _Humanin_ motif for that frame.
 
 
