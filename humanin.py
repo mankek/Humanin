@@ -15,7 +15,7 @@ def get_sequence(seq_file_path):
 def get_translation(seq_in):
     my_env = os.environ.copy()
     my_env["PATH"] = "/usr/sbin:/sbin:" + my_env["PATH"]
-    c = Popen(["python", "emboss_transeq.py", "--email", "mankek@alumni.msoe.edu", "--sequence", seq_in, "--frame", "6", "--codontable", "0"], env=my_env, shell=True, stdout=PIPE, stderr=PIPE)
+    c = Popen(["python", "emboss_transeq.py", "--email", "mankek@alumni.msoe.edu", "--sequence", seq_in, "--frame", "6", "--codontable", "2"], env=my_env, shell=True, stdout=PIPE, stderr=PIPE)
     proc_out, proc_errs = c.communicate()
     job_id = proc_errs.decode().rstrip().split(" ")[-1]
     return job_id
